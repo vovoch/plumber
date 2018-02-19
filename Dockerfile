@@ -1,15 +1,23 @@
 FROM rocker/r-base
 MAINTAINER Jeff Allen <docker@trestletech.com>
 
+RUN useradd plumber \
+	&& mkdir /home/plumber \
+	&& chown plumber:plumber /home/plumber \
+	&& addgroup plumber staff \
+  && mkdir /home/plumber/data \
+  && chown -R plumber /home/plumber/data
+  
+  
 RUN apt-get update -qq && apt-get install -y \
   git-core \
   libssl-dev \
   libcurl4-gnutls-dev
 
-RUN R -e 'install.packages(c("devtools"))'
-
-RUN R -e 'devtools::install_github("trestletech/plumber")'
+RUN R -e 'install.packages(c("devtools"))'\
+&& R -e 'devtools::install_github("trestletech/plumber")' \
+&& R -e "install.packages('fst', repos='https://cran.r-project.org/')" \
+&& R -e "install.packages('stringi', repos='https://cran.r-project.org/')"
 
 EXPOSE 8000
-ENTRYPOINT ["R", "-e", "pr <- plumber::plumb(commandArgs()[4]); pr$run(host='0.0.0.0', port=8000)"]
-CMD ["/usr/local/lib/R/site-library/plumber/examples/04-mean-sum/plumber.R"]
+CMD ["R", "-e", "setwd("/home/plumber"); r <- plumber::plumb("api.R"); r$run(host='0.0.0.0', port=8000)"]
